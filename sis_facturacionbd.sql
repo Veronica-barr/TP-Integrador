@@ -19,36 +19,45 @@ CREATE TABLE localidades (
 
 -- Tabla de Clientes
 CREATE TABLE clientes (
-    cliente_id INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    cuil VARCHAR(13) NOT NULL UNIQUE,
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+  idCliente int unsigned NOT NULL AUTO_INCREMENT,
+  nombre varchar(20) NOT NULL,
+  apellido varchar(20) NOT NULL,
+  cuil char(11) NOT NULL,
+  email varchar(80) NOT NULL,
+  fechaRegistro timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  fechaActualizacion timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (idCliente),
+  UNIQUE KEY cuil (cuil)
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4
+
 
 -- Tabla de Teléfonos
-CREATE TABLE telefonos (
-    telefono_id INT AUTO_INCREMENT PRIMARY KEY,
-    cliente_id INT NOT NULL,
-    tipo ENUM('Celular', 'Fijo', 'Trabajo', 'Otro') NOT NULL,
-    codigo_area VARCHAR(5) NOT NULL,
-    numero VARCHAR(15) NOT NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id) ON DELETE CASCADE
-);
+CREATE TABLE telefonoscliente (
+  idTelefono int unsigned NOT NULL AUTO_INCREMENT,
+  idCliente int unsigned NOT NULL,
+  telefono varchar(25) NOT NULL,
+  tipoTelefono enum('celular','fijo','otro') DEFAULT 'celular',
+  PRIMARY KEY (idTelefono),
+  KEY fk_telefonoCliente (idCliente),
+  CONSTRAINT fk_telefonoCliente FOREIGN KEY (idCliente) REFERENCES clientes (idCliente) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Tabla de Direcciones
-CREATE TABLE direcciones (
-    direccion_id INT AUTO_INCREMENT PRIMARY KEY,
-    cliente_id INT NOT NULL,
-    calle VARCHAR(100) NOT NULL,
-    numero VARCHAR(10) NOT NULL,
-    piso VARCHAR(10),
-    departamento VARCHAR(10),
-    localidad_id INT NOT NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id) ON DELETE CASCADE,
-    FOREIGN KEY (localidad_id) REFERENCES localidades(localidad_id)
-);
+CREATE TABLE direccionescliente (
+  idDireccion int unsigned NOT NULL AUTO_INCREMENT,
+  idCliente int unsigned NOT NULL,
+  calle varchar(40) NOT NULL,
+  numero varchar(10) NOT NULL,
+  piso varchar(10) DEFAULT NULL,
+  dpto varchar(10) DEFAULT NULL,
+  ciudad varchar(30) NOT NULL,
+  provincia varchar(30) DEFAULT NULL,
+  cp varchar(10) DEFAULT NULL,
+  tipoDireccion enum('fiscal','envio','otro') DEFAULT 'envio',
+  PRIMARY KEY (idDireccion),
+  KEY fk_direccionCliente (idCliente),
+  CONSTRAINT fk_direccionCliente FOREIGN KEY (idCliente) REFERENCES clientes (idCliente) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Tabla de Productos
 CREATE TABLE productos (

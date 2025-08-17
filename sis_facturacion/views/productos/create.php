@@ -10,6 +10,7 @@ require_once './includes/header.php';
         </h4>
     </div>
     
+    // El formulario para crear un nuevo producto
     <form action="index.php?module=productos&action=store" method="POST" class="needs-validation" novalidate>
         <div class="card-body">
             <div class="row g-3">
@@ -25,6 +26,7 @@ require_once './includes/header.php';
                     </div>
                 </div>
                 
+                // El campo para ingresar el nombre del producto
                 <div class="col-md-6">
                     <label for="nombre" class="form-label required-field">Nombre</label>
                     <div class="input-group">
@@ -36,11 +38,13 @@ require_once './includes/header.php';
                     </div>
                 </div>
                 
+                // El campo para ingresar la descripción del producto
                 <div class="col-md-12">
                     <label for="descripcion" class="form-label">Descripción</label>
                     <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
                 </div>
                 
+                // El campo para ingresar el precio unitario del producto
                 <div class="col-md-4">
                     <label for="precio_unitario" class="form-label required-field">Precio Unitario</label>
                     <div class="input-group">
@@ -53,6 +57,7 @@ require_once './includes/header.php';
                     </div>
                 </div>
                 
+                // El campo para ingresar el porcentaje de impuesto del producto
                 <div class="col-md-4">
                     <label for="porcentaje_impuesto" class="form-label required-field">% Impuesto</label>
                     <div class="input-group">
@@ -65,6 +70,7 @@ require_once './includes/header.php';
                     </div>
                 </div>
                 
+                // El campo para ingresar el stock inicial del producto
                 <div class="col-md-4">
                     <label for="stock" class="form-label required-field">Stock Inicial</label>
                     <div class="input-group">
@@ -78,6 +84,7 @@ require_once './includes/header.php';
             </div>
         </div>
         
+        // El footer del formulario con los botones de cancelar y guardar
         <div class="card-footer bg-light">
             <div class="d-flex justify-content-between">
                 <a href="index.php?module=productos&action=list" class="btn btn-secondary">
@@ -100,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value.length > 20) {
             this.setCustomValidity('El código no puede tener más de 20 caracteres');
         } else {
-            this.setCustomValidity('');
+            this.setCustomValidity('');// Limpia el mensaje de error
         }
     });
     
@@ -110,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value <= 0) {
             this.setCustomValidity('El precio debe ser mayor a cero');
         } else {
-            this.setCustomValidity('');
+            this.setCustomValidity('');// Limpia el mensaje de error
         }
     });
 });

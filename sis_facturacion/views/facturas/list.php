@@ -40,9 +40,17 @@
             <td><?php echo $factura['fecha']; ?></td>
             <td>$<?php echo number_format($factura['total'], 2); ?></td>
             <td>
-                <a href="index.php?module=facturas&action=show&id=<?php echo $factura['factura_id']; ?>" class="btn btn-info btn-sm">
-                    <i class="bi bi-eye"></i> Ver Detalle
-                </a>
+                <div class="btn-group" role="group">
+                    <a href="index.php?module=facturas&action=show&id=<?php echo $factura['factura_id']; ?>" 
+                       class="btn btn-info btn-sm">
+                        <i class="bi bi-eye"></i> Ver
+                    </a>
+                    <a href="index.php?module=facturas&action=delete&id=<?php echo $factura['factura_id']; ?>" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('¿Está seguro de eliminar esta factura? Esta acción no se puede deshacer.')">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </a>
+                </div>
             </td>
         </tr>
         <?php endwhile; ?>

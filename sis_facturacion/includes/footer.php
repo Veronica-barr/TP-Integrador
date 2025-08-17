@@ -20,6 +20,7 @@
                 
                 var forms = document.querySelectorAll('.needs-validation')
                 
+                // Evitar el envío de formularios inválidos
                 Array.prototype.slice.call(forms)
                     .forEach(function (form) {
                         form.addEventListener('submit', function (event) {
@@ -28,6 +29,7 @@
                                 event.stopPropagation()
                             }
                             
+                            // Añadir clase de validación
                             form.classList.add('was-validated')
                         }, false)
                     })

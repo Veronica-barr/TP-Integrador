@@ -83,19 +83,19 @@ require_once './includes/header.php';
                                     <h6 class="card-title">
                                         <i class="bi bi-house-door me-2"></i>Dirección
                                     </h6>
-                                    <p class="card-text">
-                                        <?= htmlspecialchars($direccion['calle']) ?> <?= htmlspecialchars($direccion['numero']) ?>
-                                        <?php if (!empty($direccion['piso'])): ?>
-                                            - Piso: <?= htmlspecialchars($direccion['piso']) ?>
-                                        <?php endif; ?>
-                                        <?php if (!empty($direccion['departamento'])): ?>
-                                            Depto: <?= htmlspecialchars($direccion['departamento']) ?>
-                                        <?php endif; ?>
-                                        <br>
-                                        <?= htmlspecialchars($direccion['localidad']) ?>, 
-                                        <?= htmlspecialchars($direccion['provincia']) ?>
-                                        <br>
-                                        CP: <?= htmlspecialchars($direccion['codigo_postal']) ?>
+                                  <p class="card-text">
+                                    <?= htmlspecialchars($direccion['calle']) ?> <?= htmlspecialchars($direccion['numero']) ?>
+                                    <?php if (!empty($direccion['piso'])): ?>
+                                  - Piso: <?= htmlspecialchars($direccion['piso']) ?>
+                                     <?php endif; ?>
+                                  <?php if (!empty($direccion['departamento'])): ?>
+                                  Depto: <?= htmlspecialchars($direccion['departamento']) ?>
+                                     <?php endif; ?>
+                                         <br>
+                                 <?= htmlspecialchars($direccion['localidad']) ?>, 
+                                 <?= htmlspecialchars($direccion['provincia']) ?>
+                                         <br>
+                                 CP: <?= !empty($direccion['codigo_postal']) ? htmlspecialchars($direccion['codigo_postal']) : 'No especificado' ?>
                                     </p>
                                 </div>
                             </div>

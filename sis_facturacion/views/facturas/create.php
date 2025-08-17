@@ -10,6 +10,7 @@ require_once './includes/header.php';
         </h4>
     </div>
     
+    // Verifica si hay mensajes de error en la sesión
     <?php if (isset($_SESSION['error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show m-3">
             <i class="bi bi-exclamation-triangle me-2"></i>
@@ -19,6 +20,7 @@ require_once './includes/header.php';
         <?php unset($_SESSION['error']); ?>
     <?php endif; ?>
     
+    // Verifica si hay mensajes de éxito en la sesión
     <form action="index.php?module=facturas&action=store" method="POST" class="needs-validation" novalidate>
         <div class="card-body">
             <!-- Sección Datos de la Factura -->
@@ -39,6 +41,7 @@ require_once './includes/header.php';
                         </div>
                     </div>
                     
+                    // Campo para la fecha de la factura
                     <div class="col-md-4">
                         <label for="fecha" class="form-label required-field">Fecha</label>
                         <div class="input-group">
@@ -50,6 +53,7 @@ require_once './includes/header.php';
                         </div>
                     </div>
                     
+                    // Campo para seleccionar el cliente
                     <div class="col-md-4">
                         <label for="cliente_id" class="form-label required-field">Cliente</label>
                         <select class="form-select" id="cliente_id" name="cliente_id" required>
@@ -128,6 +132,7 @@ require_once './includes/header.php';
                         <i class="bi bi-calculator me-2"></i>Resumen de la Factura
                     </h5>
                 </div>
+                // Tabla para mostrar los totales
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4 offset-md-8">
@@ -151,6 +156,7 @@ require_once './includes/header.php';
             </div>
         </div>
         
+        // Botones de acción
         <div class="card-footer bg-light">
             <div class="d-flex justify-content-between">
                 <a href="index.php?module=facturas&action=list" class="btn btn-secondary">
@@ -170,6 +176,7 @@ require_once './includes/header.php';
 </div>
 
 <script>
+    // Script para manejar la lógica de agregar productos, calcular totales, etc.
 document.addEventListener('DOMContentLoaded', function() {
     // Variables para el cálculo
     let productoCounter = 1;
@@ -204,11 +211,13 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarPrecios(this);
         });
         
+        // Validar stock al cambiar la cantidad
         newRow.querySelector('.cantidad').addEventListener('change', function() {
             validarStock(this);
             calcularTotales();
         });
         
+        // Agregar la nueva fila al contenedor
         container.appendChild(newRow);
         productoCounter++;
     });
@@ -238,9 +247,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const select = row.querySelector('.producto-select');
         const cantidad = parseInt(inputElement.value);
         
+
+        // Verifica si hay un producto seleccionado y si la cantidad es válida
         if (select.selectedIndex > 0) {
             const stock = parseInt(select.options[select.selectedIndex].getAttribute('data-stock'));
             
+            // Si la cantidad es mayor que el stock, muestra un mensaje y ajusta la cantidad al stock disponible
             if (cantidad > stock) {
                 alert('No hay suficiente stock disponible. Stock actual: ' + stock);
                 inputElement.value = stock;
@@ -254,20 +266,24 @@ document.addEventListener('DOMContentLoaded', function() {
         impuesto = 0;
         total = 0;
         
+        // Recorre cada fila de producto y calcula los totales
         document.querySelectorAll('.producto-row').forEach(row => {
             const precioInput = row.querySelector('input[name*="[precio_unitario]"]');
             const impuestoInput = row.querySelector('input[name*="[porcentaje_impuesto]"]');
             const cantidadInput = row.querySelector('.cantidad');
             
+            // Verifica que los campos de precio, impuesto y cantidad tengan valores
             if (precioInput.value && impuestoInput.value && cantidadInput.value) {
                 const cantidad = parseFloat(cantidadInput.value);
                 const precio = parseFloat(precioInput.value);
                 const impuestoPorc = parseFloat(impuestoInput.value);
                 
+                // Calcula los totales de la línea
                 const subtotalLinea = cantidad * precio;
                 const impuestoLinea = subtotalLinea * (impuestoPorc / 100);
                 const totalLinea = subtotalLinea + impuestoLinea;
                 
+                // Suma los totales
                 subtotal += subtotalLinea;
                 impuesto += impuestoLinea;
                 total += totalLinea;
@@ -290,6 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
         actualizarPrecios(this);
     });
     
+    // Validar stock al cambiar la cantidad en la fila inicial
     document.querySelector('.cantidad').addEventListener('change', function() {
         validarStock(this);
         calcularTotales();
@@ -302,8 +319,14 @@ document.addEventListener('DOMContentLoaded', function() {
     (function () {
         'use strict'
         
+        // Selecciona todos los formularios con la clase 'needs-validation'
+        // needs-validation es una clase que se usa para aplicar validación de Bootstrap
+        // Se usa para validar los campos del formulario antes de enviarlo
         const forms = document.querySelectorAll('.needs-validation')
         
+
+        // Recorre cada formulario y agrega un evento de submit
+        // addEventListener es un método que se usa para agregar un evento a un elemento
         Array.prototype.slice.call(forms)
             .forEach(function (form) {
                 form.addEventListener('submit', function (event) {
@@ -312,6 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         event.stopPropagation()
                     }
                     
+                    // Añadir clase de validación
+                    // was-validated es una clase que se usa para aplicar estilos de validación de Bootstrap
                     form.classList.add('was-validated')
                 }, false)
             })

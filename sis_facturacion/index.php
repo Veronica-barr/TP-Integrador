@@ -1,59 +1,71 @@
 <?php
-session_start(); // Inicia o reanuda una sesión para mantener estado entre páginas
-//carga los archivos necesarios
-require_once 'config/database.php';
-require_once 'models/ClienteModel.php';
-require_once 'models/ProductoModel.php';
-require_once 'models/FacturaModel.php';
+require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/models/ClienteModel.php';
+require_once __DIR__ . '/models/ProductoModel.php';
+require_once __DIR__ . '/models/FacturaModel.php';
+require_once __DIR__ . '/DAL/ClienteDAL.php';
+require_once __DIR__ . '/DAL/ProductoDAL.php';
+require_once __DIR__ . '/DAL/FacturaDAL.php';
+require_once __DIR__ . '/controller/ClienteController.php';
+require_once __DIR__ . '/controller/ProductoController.php';
+require_once __DIR__ . '/controller/FacturaController.php';
 
-//crea la conexión a la base de datos
-$database = new Database();
-$db = $database->getConnection();
+$clienteCtrl = new ClienteController();
+$productoCtrl = new ProductoController();
+$facturaCtrl  = new FacturaController();
 
-//instancia los modelos principales
-$clienteModel = new ClienteModel($db);
-$productoModel = new ProductoModel($db);
-$facturaModel = new FacturaModel($db);
-
-//obtiene la acción y módulo solicitados de los parametros GET
-//por defecto, si no se especifica, se muestra la página de inicio
-$action = isset($_GET['action']) ? $_GET['action'] : 'home';
+// Obtiene la acción y módulo solicitados de los parámetros GET
+$action = isset($_GET['action']) ? $_GET['action'] : 'listar';
 $module = isset($_GET['module']) ? $_GET['module'] : '';
 
-//sistema de enrutamiento basado en el modulo solicitado
+// Sistema de enrutamiento basado en el módulo solicitado
 switch ($module) {
     case 'clientes':
-        require_once 'controller/ClienteController.php';
-        $controller = new ClienteController($clienteModel);
+        $controller = $clienteCtrl;
         break;
     case 'productos':
-        require_once 'controller/ProductoController.php';
-        $controller = new ProductoController($productoModel);
+        $controller = $productoCtrl;
         break;
     case 'facturas':
-        require_once 'controller/FacturaController.php';
-//FcaturaController necesita mas modelos porqeu trabaja con clientes y productos
-        $controller = new FacturaController($facturaModel, $clienteModel, $productoModel);
+        $controller = $facturaCtrl;
         break;
+    case '':
     default:
-//di no encontrar el modulo, redirige a la página de inicio
+        // Página de inicio
         require_once 'includes/header.php';
-        echo '<h1>Sistema de Facturación</h1>';
-        echo '<p>Bienvenido al sistema de gestión de facturas</p>';
-        echo '<ul>';
-        echo '<li><a href="index.php?module=clientes">Gestión de Clientes</a></li>';
-        echo '<li><a href="index.php?module=productos">Gestión de Productos</a></li>';
-        echo '<li><a href="index.php?module=facturas">Gestión de Facturas</a></li>';
-        echo '</ul>';
+        echo '<h1>Bienvenido al Sistema de Facturación</h1>';
+        echo '<div class="row">';
+        echo '<div class="col-md-4">';
+        echo '<div class="card">';
+        echo '<div class="card-body text-center">';
+        echo '<h5 class="card-title"><i class="bi bi-people fs-1"></i></h5>';
+        echo '<a href="index.php?module=clientes&action=listar" class="btn btn-primary">Gestión de Clientes</a>';
+        echo '</div></div></div>';
+        
+        echo '<div class="col-md-4">';
+        echo '<div class="card">';
+        echo '<div class="card-body text-center">';
+        echo '<h5 class="card-title"><i class="bi bi-box-seam fs-1"></i></h5>';
+        echo '<a href="index.php?module=productos&action=listar" class="btn btn-primary">Gestión de Productos</a>';
+        echo '</div></div></div>';
+        
+        echo '<div class="col-md-4">';
+        echo '<div class="card">';
+        echo '<div class="card-body text-center">';
+        echo '<h5 class="card-title"><i class="bi bi-receipt fs-1"></i></h5>';
+        echo '<a href="index.php?module=facturas&action=listar" class="btn btn-primary">Gestión de Facturas</a>';
+        echo '</div></div></div>';
+        echo '</div>';
         require_once 'includes/footer.php';
-        exit;//termina la ejecución aquí para el caso default
+        exit;
 }
 
-//verifica si el metodo action existe en el controlador
+// Verifica si el método action existe en el controlador
 if (!method_exists($controller, $action)) {
-    $action = 'list';//acion por defecto si no existe
+    // Acción por defecto si no existe
+    $action = 'listar';
 }
 
-//ejecuta la accion solicitada en el controlador correspondiente
+// Ejecuta la acción solicitada en el controlador correspondiente
 $controller->$action();
 ?>

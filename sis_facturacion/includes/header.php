@@ -85,15 +85,15 @@
                     <h1 class="h2"><?= $title ?? 'Sistema de Facturación' ?></h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group me-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                            <!-- <button type="button" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-printer"></i> Imprimir
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary">
                                 <i class="bi bi-download"></i> Exportar
-                            </button>
+                            </button> -->
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary">
+                        <!-- <button type="button" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-plus-circle"></i> Nuevo
-                        </button>
+                        </button> -->
                     </div>
                 </div>

@@ -1,89 +1,51 @@
 <?php
+require_once __DIR__ . '/../DAL/ProductoDAL.php';
+
 class ProductoController {
-    private $model;
+    private $productoDAL;
 
-    // Constructor que recibe el modelo de producto
-    // Se inyecta el modelo para que el controlador pueda interactuar con la base de datos
-    // El modelo es una instancia de ProductoModel que se pasa al controlador
-    public function __construct($model) {
-        $this->model = $model;
+    public function __construct() {
+        $this->productoDAL = new ProductoDAL();
     }
 
-    // Lista todos los productos
-    // Este método obtiene todos los productos del modelo y los muestra en la vista
-    public function list() {
-        $productos = $this->model->getAllProductos();
-        require_once 'views/productos/list.php';
-    }
-
-    // Muestra el formulario para crear un nuevo producto
-    public function create() {
-        require_once 'views/productos/create.php';
-    }
-
-    // Guarda un nuevo producto en la base de datos
-    public function store() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $codigo = $_POST['codigo'];
-            $nombre = $_POST['nombre'];
-            $descripcion = $_POST['descripcion'];
-            $precio_unitario = $_POST['precio_unitario'];
-            $porcentaje_impuesto = $_POST['porcentaje_impuesto'];
-            $stock = $_POST['stock'];
-
-            // Validar datos
-            if ($this->model->createProducto($codigo, $nombre, $descripcion, $precio_unitario, $porcentaje_impuesto, $stock)) {
-                header('Location: index.php?module=productos&action=list');
+        public function listar() {
+        try {
+            $productos = $this->productoDAL->obtenerProductos();
+            
+            // Incluir la vista
+            require_once __DIR__ . '/../includes/header.php';
+            echo '<h2>Listado de Productos</h2>';
+            
+            if (empty($productos)) {
+                echo '<div class="alert alert-info">No hay productos registrados.</div>';
             } else {
-                echo "Error al crear el producto";
+                echo '<table class="table table-striped">';
+                echo '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th></tr></thead>';
+                echo '<tbody>';
+                foreach ($productos as $producto) {
+                    echo '<tr>';
+                    echo '<td>' . $producto->producto_id . '</td>';
+                    echo '<td>' . htmlspecialchars($producto->nombre) . '</td>';
+                    echo '<td>$' . number_format($producto->precio_unitario, 2) . '</td>';
+                    echo '</tr>';
+                }
+                echo '</tbody></table>';
             }
+            
+            require_once __DIR__ . '/../includes/footer.php';
+            
+        } catch (Exception $e) {
+            error_log("Error al listar productos: " . $e->getMessage());
+            echo '<div class="alert alert-danger">Error al cargar los productos.</div>';
         }
     }
 
-    // Edita un producto existente
-    public function edit() {
-        $id = $_GET['id'];
-        $producto = $this->model->getProductoById($id);
-        require_once 'views/productos/edit.php';
+    public function listarProductos() {
+        return $this->productoDAL->obtenerProductos();
     }
 
-    // Actualiza un producto existente
-    public function update() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
-            $codigo = $_POST['codigo'];
-            $nombre = $_POST['nombre'];
-            $descripcion = $_POST['descripcion'];
-            $precio_unitario = $_POST['precio_unitario'];
-            $porcentaje_impuesto = $_POST['porcentaje_impuesto'];
-            $stock = $_POST['stock'];
-
-            // Validar datos
-            if ($this->model->updateProducto($id, $codigo, $nombre, $descripcion, $precio_unitario, $porcentaje_impuesto, $stock)) {
-                header('Location: index.php?module=productos&action=list');
-            } else { // Si la actualización falla, muestra un mensaje de error
-                echo "Error al actualizar el producto";
-            }
-        }
-    }
-
-    // Elimina un producto
-    // Este método recibe el ID del producto a eliminar y lo elimina de la base de datos
-    public function delete() {
-        $id = $_GET['id'];
-        if ($this->model->deleteProducto($id)) {
-            header('Location: index.php?module=productos&action=list');
-        } else {
-            echo "Error al eliminar el producto";
-        }
-    }
-
-    // Muestra los detalles de un producto
-    // Este método obtiene los detalles del producto por ID y los muestra en una vista
-    public function show() {
-        $id = $_GET['id'];
-        $producto = $this->model->getProductoById($id);
-        require_once 'views/productos/show.php';
+    public function agregarProducto($nombre, $precio) {
+        $producto = new Producto(null, $nombre, $precio);
+        return $this->productoDAL->crearProducto($producto);
     }
 }
-?>

@@ -1,325 +1,195 @@
-<?php 
-$title = "Nuevo Cliente";
-require_once './includes/header.php';
+<?php
+require_once __DIR__ . '/controller/ClienteController.php';
 
-// Mostrar mensajes de error
-if (isset($_SESSION['form_error'])): ?>
-    <div class="alert alert-danger alert-dismissible fade show mt-3">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <?= htmlspecialchars($_SESSION['form_error']) ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <?php unset($_SESSION['form_error']); ?>
-<?php endif; ?>
-
-<!-- // Mostrar mensaje de éxito si se creó el cliente correctamente -->
-<?php if (isset($_SESSION['form_success'])): ?>
-    <div class="alert alert-success alert-dismissible fade show mt-3">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <?= $_SESSION['form_success'] ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <?php unset($_SESSION['form_success']); ?>
-<?php endif; ?>
-
-<!-- // Formulario para registrar un nuevo cliente -->
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h4 class="mb-0">Registrar Nuevo Cliente</h4>
-    </div>
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $clienteController = new ClienteController();
+    $resultado = $clienteController->crearCliente($_POST);
     
-    <!-- // Iniciar el formulario -->
-    <form action="index.php?module=clientes&action=store" method="POST" class="needs-validation" novalidate>
-        <div class="card-body">
-            <!-- Sección Datos Básicos -->
-            <div class="mb-4 border-bottom pb-3">
-                <h5 class="text-primary">
-                    <i class="bi bi-person-lines-fill me-2"></i>Datos Básicos
-                </h5>
-                
-                <!-- // Mostrar campos de datos básicos del cliente -->
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="nombre" class="form-label required-field">Nombre</label>
-                        <input type="text" class="form-control" id="nombre" name="nombre" 
-                               value="<?= htmlspecialchars($_SESSION['form_data']['nombre'] ?? '') ?>" required>
-                        <div class="invalid-feedback">
-                            Por favor ingrese el nombre del cliente.
-                        </div>
-                    </div>
-                    
-                    <!-- // // Mostrar campo para el apellido del cliente -->
-                    <div class="col-md-6">
-                        <label for="apellido" class="form-label required-field">Apellido</label>
-                        <input type="text" class="form-control" id="apellido" name="apellido" 
-                               value="<?= htmlspecialchars($_SESSION['form_data']['apellido'] ?? '') ?>" required>
-                        <div class="invalid-feedback">
-                            Por favor ingrese el apellido del cliente.
-                        </div>
-                    </div>
-                    
-                    <!-- // // Mostrar campo para el cuil del cliente -->
-                    <div class="col-md-6">
-                        <label for="cuil" class="form-label required-field">CUIL/CUIT</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-card-heading"></i></span>
-                            <input type="text" class="form-control" id="cuil" name="cuil" 
-                                   value="<?= htmlspecialchars($_SESSION['form_data']['cuil'] ?? '') ?>"
-                                   placeholder="20123456789" pattern="\d{11}" required>
-                        </div>
-                        <div class="invalid-feedback">
-                            Ingrese un CUIL válido (11 dígitos sin guiones).
-                        </div>
-                        <small class="form-text text-muted">11 dígitos sin guiones (Ej: 20123456789)</small>
-                    </div>
-                </div>
+    if ($resultado) {
+        header('Location: list.php?mensaje=Cliente creado correctamente&tipo=success');
+        exit();
+    } else {
+        $error = "Error al crear el cliente";
+    }
+}
+?>
+
+<?php include __DIR__ . '/includes/header.php'; ?>
+<?php include __DIR__ . '/includes/navigation.php'; ?>
+
+<div class="container-fluid p-4">
+    <h2>Crear Nuevo Cliente</h2>
+    
+    <?php if (isset($error)): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php echo $error; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+    
+    <form method="POST" id="clienteForm">
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input type="text" class="form-control" id="nombre" name="nombre" required>
             </div>
-            
-            <!-- Sección Teléfonos -->
-            <div class="mb-4 border-bottom pb-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-primary">
-                        <i class="bi bi-telephone-fill me-2"></i>Teléfonos
-                    </h5>
-                    <button type="button" id="add-telefono" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Agregar Teléfono
-                    </button>
-                </div>
-                
-                <div id="telefonos-container">
-                    <?php 
-                    // Mostrar teléfonos existentes o campo inicial
-                    $telefonos_count = !empty($_SESSION['form_data']['telefonos']) ? count($_SESSION['form_data']['telefonos']) : 1;
-                    $max_telefonos = 3; // Límite máximo de teléfonos
-                    
-                    // Mostrar hasta 3 campos de teléfono
-                    for ($i = 0; $i < $max_telefonos; $i++):
-                        $telefono = $_SESSION['form_data']['telefonos'][$i] ?? [];
-                        $hidden = ($i >= $telefonos_count && $i > 0) ? 'style="display:none;"' : '';
-                    ?>
-                    <!-- // Mostrar cada fila de teléfono -->
-                        <div class="row g-3 telefono-row mb-3" <?= $hidden ?> id="telefono-row-<?= $i ?>">
-                            <div class="col-md-3">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Tipo</label>
-                                <select class="form-select" name="telefonos[<?= $i ?>][tipo]" <?= $i === 0 ? 'required' : '' ?>>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="Celular" <?= ($telefono['tipo'] ?? '') === 'Celular' ? 'selected' : '' ?>>Celular</option>
-                                    <option value="Fijo" <?= ($telefono['tipo'] ?? '') === 'Fijo' ? 'selected' : '' ?>>Fijo</option>
-                                    <option value="Trabajo" <?= ($telefono['tipo'] ?? '') === 'Trabajo' ? 'selected' : '' ?>>Trabajo</option>
-                                </select>
-                            </div>
-                            <!-- // Mostrar campo para el código de área y número del teléfono -->
-                            <div class="col-md-3">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Código Área</label>
-                                <input type="text" class="form-control" name="telefonos[<?= $i ?>][codigo_area]" 
-                                       value="<?= htmlspecialchars($telefono['codigo_area'] ?? '') ?>"
-                                       placeholder="011" pattern="\d{2,4}" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para el número del teléfono --> 
-                            <div class="col-md-4">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Número</label>
-                                <input type="tel" class="form-control" name="telefonos[<?= $i ?>][numero]" 
-                                       value="<?= htmlspecialchars($telefono['numero'] ?? '') ?>"
-                                       placeholder="12345678" pattern="\d{6,15}" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para el número interno del teléfono -->
-                            <div class="col-md-2 d-flex align-items-end">
-                                <?php if ($i > 0): ?>
-                                    <button type="button" class="btn btn-outline-danger remove-telefono w-100" data-index="<?= $i ?>">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endfor; ?>
-                </div>
+            <div class="col-md-4">
+                <label for="apellido" class="form-label">Apellido</label>
+                <input type="text" class="form-control" id="apellido" name="apellido" required>
             </div>
-            
-            <!-- Sección Direcciones -->
-            <div class="mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-primary">
-                        <i class="bi bi-house-fill me-2"></i>Direcciones
-                    </h5>
-                    <button type="button" id="add-direccion" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle me-1"></i> Agregar Dirección
-                    </button>
+            <div class="col-md-4">
+                <label for="cuil" class="form-label">CUIL</label>
+                <input type="text" class="form-control" id="cuil" name="cuil" required>
+            </div>
+        </div>
+        
+        <h4 class="mt-4">Teléfonos</h4>
+        <div id="telefonos-container">
+            <div class="row mb-3 telefono-row">
+                <div class="col-md-3">
+                    <label class="form-label">Tipo</label>
+                    <select class="form-control" name="telefonos[0][tipo]">
+                        <option value="MOVIL">Móvil</option>
+                        <option value="FIJO">Fijo</option>
+                    </select>
                 </div>
-                
-                <div id="direcciones-container">
-                    <?php 
-                    // Mostrar direcciones existentes o campo inicial
-                    $direcciones_count = !empty($_SESSION['form_data']['direcciones']) ? count($_SESSION['form_data']['direcciones']) : 1;
-                    $max_direcciones = 2; // Límite máximo de direcciones
-                    
-                    // Mostrar hasta 2 campos de dirección
-                    for ($i = 0; $i < $max_direcciones; $i++):
-                        $direccion = $_SESSION['form_data']['direcciones'][$i] ?? [];
-                        $hidden = ($i >= $direcciones_count && $i > 0) ? 'style="display:none;"' : '';
-                    ?>
-                    <!-- // Mostrar cada fila de dirección -->
-                        <div class="row g-3 direccion-row mb-3" <?= $hidden ?> id="direccion-row-<?= $i ?>">
-                            <div class="col-md-6">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Calle</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][calle]" 
-                                       value="<?= htmlspecialchars($direccion['calle'] ?? '') ?>" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para el número de la dirección -->
-                            <div class="col-md-2">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Número</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][numero]" 
-                                       value="<?= htmlspecialchars($direccion['numero'] ?? '') ?>" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para el piso y departamento de la dirección  -->
-                            <div class="col-md-2">
-                                <label class="form-label">Piso</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][piso]"
-                                       value="<?= htmlspecialchars($direccion['piso'] ?? '') ?>">
-                            </div>
-                            <!-- // Mostrar campo para el departamento de la dirección -->
-                            <div class="col-md-2">
-                                <label class="form-label">Depto</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][departamento]"
-                                       value="<?= htmlspecialchars($direccion['departamento'] ?? '') ?>">
-                            </div>
-                            <!-- // Mostrar campos para provincia, localidad y código postal de la dirección -->
-                            <div class="col-md-4">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Provincia</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][provincia]"
-                                       value="<?= htmlspecialchars($direccion['provincia'] ?? '') ?>" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para la localidad de la dirección -->
-                            <div class="col-md-4">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Localidad</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][localidad]"
-                                       value="<?= htmlspecialchars($direccion['localidad'] ?? '') ?>" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Mostrar campo para el código postal de la dirección -->
-                            <div class="col-md-4">
-                                <label class="form-label <?= $i === 0 ? 'required-field' : '' ?>">Código Postal</label>
-                                <input type="text" class="form-control" name="direcciones[<?= $i ?>][codigo_postal]"
-                                       value="<?= htmlspecialchars($direccion['codigo_postal'] ?? '') ?>" <?= $i === 0 ? 'required' : '' ?>>
-                            </div>
-                            <!-- // Botón para eliminar la dirección -->
-                            <div class="col-md-2 d-flex align-items-end">
-                                <?php if ($i > 0): ?>
-                                    <button type="button" class="btn btn-outline-danger remove-direccion w-100" data-index="<?= $i ?>">
-                                        <i class="bi bi-trash"></i> Eliminar
-                                    </button>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endfor; ?>
+                <div class="col-md-3">
+                    <label class="form-label">Código Área</label>
+                    <input type="text" class="form-control" name="telefonos[0][codigo_area]">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Número</label>
+                    <input type="text" class="form-control" name="telefonos[0][numero]">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger btn-sm remove-telefono">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </div>
             </div>
         </div>
-        <!-- // // Botones de acción del formulario -->
-        <div class="card-footer bg-light">
-            <div class="d-flex justify-content-between">
-                <button type="reset" class="btn btn-secondary">
-                    <i class="bi bi-eraser me-1"></i> Limpiar
-                </button>
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-save me-1"></i> Guardar Cliente
-                </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="add-telefono">
+            <i class="bi bi-plus"></i> Agregar Teléfono
+        </button>
+        
+        <h4 class="mt-4">Direcciones</h4>
+        <div id="direcciones-container">
+            <div class="row mb-3 direccion-row">
+                <div class="col-md-4">
+                    <label class="form-label">Calle</label>
+                    <input type="text" class="form-control" name="direcciones[0][calle]">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Número</label>
+                    <input type="text" class="form-control" name="direcciones[0][numero]">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Piso</label>
+                    <input type="text" class="form-control" name="direcciones[0][piso]">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Depto</label>
+                    <input type="text" class="form-control" name="direcciones[0][departamento]">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger btn-sm remove-direccion">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="col-md-4 mt-2">
+                    <label class="form-label">Localidad</label>
+                    <select class="form-control" name="direcciones[0][localidad_id]">
+                        <option value="1">Buenos Aires</option>
+                        <option value="2">Córdoba</option>
+                        <option value="3">Rosario</option>
+                    </select>
+                </div>
             </div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="add-direccion">
+            <i class="bi bi-plus"></i> Agregar Dirección
+        </button>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar Cliente</button>
+            <a href="listar.php" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
 </div>
 
 <script>
-    // Controlar la visibilidad de los campos de teléfono y dirección
-document.addEventListener('DOMContentLoaded', function() {
-    // Variables para controlar los campos visibles
-    let telefonosVisibles = <?= $telefonos_count ?>;
-    const maxTelefonos = <?= $max_telefonos ?>;
-    let direccionesVisibles = <?= $direcciones_count ?>;
-    const maxDirecciones = <?= $max_direcciones ?>;
-    
-    // Botón para agregar teléfono
-    document.getElementById('add-telefono').addEventListener('click', function() {
-        if (telefonosVisibles < maxTelefonos) {
-            document.getElementById('telefono-row-' + telefonosVisibles).style.display = 'flex';
-            telefonosVisibles++;
-            
-            // Ocultar botón si llegamos al máximo
-            if (telefonosVisibles >= maxTelefonos) {
-                this.style.display = 'none';
-            }
-        }
-    });
-    
-    // Botón para agregar dirección
-    document.getElementById('add-direccion').addEventListener('click', function() {
-        if (direccionesVisibles < maxDirecciones) {
-            document.getElementById('direccion-row-' + direccionesVisibles).style.display = 'flex';
-            direccionesVisibles++;
-            
-            // Ocultar botón si llegamos al máximo
-            if (direccionesVisibles >= maxDirecciones) {
-                this.style.display = 'none';
-            }
-        }
-    });
-    
-    // Eliminar teléfono
-    document.querySelectorAll('.remove-telefono').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
-            document.getElementById('telefono-row-' + index).style.display = 'none';
-            telefonosVisibles--;
-            
-            // Resetear los valores del campo eliminado
-            const row = document.getElementById('telefono-row-' + index);
-            row.querySelectorAll('input, select').forEach(field => {
-                field.value = '';
-            });
-            
-            // Mostrar nuevamente el botón de agregar
-            document.getElementById('add-telefono').style.display = 'block';
-        });
-    });
-    
-    // Eliminar dirección
-    document.querySelectorAll('.remove-direccion').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = this.getAttribute('data-index');
-            document.getElementById('direccion-row-' + index).style.display = 'none';
-            direccionesVisibles--;
-            
-            // Resetear los valores del campo eliminado
-            const row = document.getElementById('direccion-row-' + index);
-            row.querySelectorAll('input, select').forEach(field => {
-                field.value = '';
-            });
-            
-            // Mostrar nuevamente el botón de agregar
-            document.getElementById('add-direccion').style.display = 'block';
-        });
-    });
-    
-    // Validación del CUIL
-    const cuilInput = document.getElementById('cuil');
-    if (cuilInput) {
-        cuilInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length > 11) {
-                this.value = this.value.slice(0, 11);
-            }
-        });
+let telefonoCount = 1;
+let direccionCount = 1;
+
+document.getElementById('add-telefono').addEventListener('click', function() {
+    const container = document.getElementById('telefonos-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-3 telefono-row';
+    newRow.innerHTML = `
+        <div class="col-md-3">
+            <select class="form-control" name="telefonos[${telefonoCount}][tipo]">
+                <option value="MOVIL">Móvil</option>
+                <option value="FIJO">Fijo</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="text" class="form-control" name="telefonos[${telefonoCount}][codigo_area]">
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control" name="telefonos[${telefonoCount}][numero]">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-danger btn-sm remove-telefono">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    telefonoCount++;
+});
+
+document.getElementById('add-direccion').addEventListener('click', function() {
+    const container = document.getElementById('direcciones-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-3 direccion-row';
+    newRow.innerHTML = `
+        <div class="col-md-4">
+            <input type="text" class="form-control" name="direcciones[${direccionCount}][calle]">
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control" name="direcciones[${direccionCount}][numero]">
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control" name="direcciones[${direccionCount}][piso]">
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control" name="direcciones[${direccionCount}][departamento]">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-danger btn-sm remove-direccion">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="col-md-4 mt-2">
+            <select class="form-control" name="direcciones[${direccionCount}][localidad_id]">
+                <option value="1">Buenos Aires</option>
+                <option value="2">Córdoba</option>
+                <option value="3">Rosario</option>
+            </select>
+        </div>
+    `;
+    container.appendChild(newRow);
+    direccionCount++;
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-telefono')) {
+        e.target.closest('.telefono-row').remove();
     }
-    
-    // Ocultar botones de agregar si ya están todos visibles
-    if (telefonosVisibles >= maxTelefonos) {
-        document.getElementById('add-telefono').style.display = 'none';
-    }
-    if (direccionesVisibles >= maxDirecciones) {
-        document.getElementById('add-direccion').style.display = 'none';
+    if (e.target.classList.contains('remove-direccion')) {
+        e.target.closest('.direccion-row').remove();
     }
 });
 </script>
 
-<?php 
-unset($_SESSION['form_data']);
-require_once './includes/footer.php'; 
-?>
+<?php include __DIR__ . '/includes/footer.php'; ?>

@@ -1,51 +1,50 @@
 <?php
-require_once __DIR__ . '/../DAL/ProductoDAL.php';
+require_once __DIR__ . "/../DAL/ProductoDAL.php";
 
 class ProductoController {
-    private $productoDAL;
+    private $dal;
 
     public function __construct() {
-        $this->productoDAL = new ProductoDAL();
+        $this->dal = new ProductoDAL();
     }
 
-        public function listar() {
-        try {
-            $productos = $this->productoDAL->obtenerProductos();
-            
-            // Incluir la vista
-            require_once __DIR__ . '/../includes/header.php';
-            echo '<h2>Listado de Productos</h2>';
-            
-            if (empty($productos)) {
-                echo '<div class="alert alert-info">No hay productos registrados.</div>';
-            } else {
-                echo '<table class="table table-striped">';
-                echo '<thead><tr><th>ID</th><th>Nombre</th><th>Precio</th></tr></thead>';
-                echo '<tbody>';
-                foreach ($productos as $producto) {
-                    echo '<tr>';
-                    echo '<td>' . $producto->producto_id . '</td>';
-                    echo '<td>' . htmlspecialchars($producto->nombre) . '</td>';
-                    echo '<td>$' . number_format($producto->precio_unitario, 2) . '</td>';
-                    echo '</tr>';
-                }
-                echo '</tbody></table>';
-            }
-            
-            require_once __DIR__ . '/../includes/footer.php';
-            
-        } catch (Exception $e) {
-            error_log("Error al listar productos: " . $e->getMessage());
-            echo '<div class="alert alert-danger">Error al cargar los productos.</div>';
-        }
+    public function listar() {
+        return $this->dal->listar();
     }
 
-    public function listarProductos() {
-        return $this->productoDAL->obtenerProductos();
+    public function ver($id) {
+        return $this->dal->getById($id);
     }
 
-    public function agregarProducto($nombre, $precio) {
-        $producto = new Producto(null, $nombre, $precio);
-        return $this->productoDAL->crearProducto($producto);
+    public function crear($data) {
+        $producto = new Producto(
+            null,
+            $data["codigo"],
+            $data["nombre"],
+            $data["descripcion"],
+            $data["precio_unitario"],
+            $data["porcentaje_impuesto"],
+            $data["stock"],
+            1
+        );
+        return $this->dal->insert($producto);
+    }
+
+    public function actualizar($id, $data) {
+        $producto = new Producto(
+            $id,
+            $data["codigo"],
+            $data["nombre"],
+            $data["descripcion"],
+            $data["precio_unitario"],
+            $data["porcentaje_impuesto"],
+            $data["stock"],
+            $data["activo"]
+        );
+        return $this->dal->update($producto);
+    }
+
+    public function eliminar($id) {
+        return $this->dal->delete($id);
     }
 }

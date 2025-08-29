@@ -1,30 +1,93 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../models/ProductoModel.php';
+require_once "BaseDAL.php";
+require_once __DIR__ . "/../models/Producto.php";
 
-class ProductoDAL {
-    private $db;
+class ProductoDAL extends BaseDAL {
 
     public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
-    }
+    $db = Database::getConnection();
+    parent::__construct($db);
+}
 
-    public function crearProducto(Producto $producto) {
-        $stmt = $this->db->prepare("INSERT INTO productos (nombre, precio_unitario) VALUES (?, ?)");
-        $stmt->bind_param("sd", $producto->nombre, $producto->precio_unitario);
-        return $stmt->execute();
-    }
 
-    public function obtenerProductos() {
-        $result = $this->db->query("SELECT * FROM productos");
+    public function listar() {
+        $sql = "SELECT * FROM productos WHERE activo = 1";
+        $stmt = $this->executeQuery($sql);
+        $rows = $stmt->fetchAll();
+
         $productos = [];
-        while ($row = $result->fetch_assoc()) {
+        foreach ($rows as $row) {
             $productos[] = new Producto(
-                $row['producto_id'], 
-                $row['nombre'], 
-                $row['precio_unitario']
+                $row["producto_id"],
+                $row["codigo"],
+                $row["nombre"],
+                $row["descripcion"],
+                $row["precio_unitario"],
+                $row["porcentaje_impuesto"],
+                $row["stock"],
+                $row["activo"]
             );
         }
         return $productos;
+    }
+
+    public function getById($id) {
+        $sql = "SELECT * FROM productos WHERE producto_id = ?";
+        $stmt = $this->executeQuery($sql, [$id]);
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+
+        if ($row) {
+            return new Producto(
+                $row["producto_id"],
+                $row["codigo"],
+                $row["nombre"],
+                $row["descripcion"],
+                $row["precio_unitario"],
+                $row["porcentaje_impuesto"],
+                $row["stock"],
+                $row["activo"]
+            );
+        }
+        return null;
+    }
+
+    public function insert(Producto $producto) {
+        $sql = "INSERT INTO productos (codigo, nombre, descripcion, precio_unitario, porcentaje_impuesto, stock, activo)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $this->executeQuery($sql);
+        return $stmt->execute([
+            $producto->codigo,
+            $producto->nombre,
+            $producto->descripcion,
+            $producto->precio_unitario,
+            $producto->porcentaje_impuesto,
+            $producto->stock,
+            $producto->activo
+        ]);
+    }
+
+    public function update(Producto $producto) {
+        $sql = "UPDATE productos 
+                SET codigo = ?, nombre = ?, descripcion = ?, precio_unitario = ?, porcentaje_impuesto = ?, stock = ?, activo = ? 
+                WHERE producto_id = ?";
+        $stmt = $this->executeQuery($sql);
+        return $stmt->execute([
+            $producto->codigo,
+            $producto->nombre,
+            $producto->descripcion,
+            $producto->precio_unitario,
+            $producto->porcentaje_impuesto,
+            $producto->stock,
+            $producto->activo,
+            $producto->producto_id
+        ]);
+    }
+
+    public function delete($id) {
+        // Baja lógica
+        $sql = "UPDATE productos SET activo = 0 WHERE producto_id = ?";
+        $stmt = $this->executeQuery($sql);
+        return $stmt->execute([$id]);
     }
 }

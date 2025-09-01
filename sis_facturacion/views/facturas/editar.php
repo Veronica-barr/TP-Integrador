@@ -7,11 +7,29 @@ $facturaController = new FacturaController();
 $clienteController = new ClienteController();
 $productoController = new ProductoController();
 
-// FIX: Use listar() instead of obtenerCliente() with undefined variable
-$clientes = $clienteController->listarClientes(); // Changed from obtenerCliente($cliente_id)
+$factura_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// FIX: Use listar() for products instead of crear() with undefined $data
-$productos = $productoController->listar(); // Changed from crear($data)
+if ($factura_id <= 0) {
+    header('Location: list.php?mensaje=Factura no válida&tipo=danger');
+    exit;
+}
+
+// Obtener la factura existente
+$factura = $facturaController->obtenerFacturaPorId($factura_id);
+
+if (!$factura) {
+    header('Location: list.php?mensaje=Factura no encontrada&tipo=danger');
+    exit;
+}
+
+// Verificar que la factura esté pendiente para poder editarla
+if ($factura->estado != 'PENDIENTE') {
+    header('Location: list.php?mensaje=Solo se pueden editar facturas con estado PENDIENTE&tipo=warning');
+    exit;
+}
+
+$clientes = $clienteController->listarClientes();
+$productos = $productoController->listar();
 
 $mensaje = '';
 $tipoMensaje = '';
@@ -37,17 +55,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        $facturaId = $facturaController->crearFactura($data);
+        // Actualizar la factura
+        $resultado = $facturaController->actualizarFactura($factura_id, $data);
         
-        if ($facturaId) {
-            $mensaje = "Factura creada exitosamente con ID: $facturaId";
+        if ($resultado) {
+            $mensaje = "Factura actualizada exitosamente";
             $tipoMensaje = 'success';
             
             // Redirigir después de 2 segundos
-            header("Refresh: 2; URL=list.php");
+            header("Refresh: 2; URL=show.php?id=" . $factura_id);
         }
     } catch (Exception $e) {
-        $mensaje = "Error al crear la factura: " . $e->getMessage();
+        $mensaje = "Error al actualizar la factura: " . $e->getMessage();
         $tipoMensaje = 'danger';
     }
 }
@@ -62,7 +81,7 @@ if (file_exists($headerPath)) {
     include $headerPath;
 } else {
     // Header mínimo si no existe el archivo
-    echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Crear Factura</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"><style>.product-row { margin-bottom: 10px; } .totals-container { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }</style></head><body>';
+    echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Editar Factura</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"><style>.product-row { margin-bottom: 10px; } .totals-container { background-color: #f8f9fa; padding: 15px; border-radius: 5px; }</style></head><body>';
 }
 
 // Incluir navegación si existe
@@ -73,7 +92,7 @@ if (file_exists($navigationPath)) {
 
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Crear Nueva Factura</h2>
+        <h2>Editar Factura #<?php echo $factura->numero_factura; ?></h2>
         <a href="list.php" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Volver al Listado
         </a>
@@ -99,7 +118,7 @@ if (file_exists($navigationPath)) {
                             <select class="form-select" id="cliente_id" name="cliente_id" required>
                                 <option value="">Seleccionar cliente...</option>
                                 <?php foreach ($clientes as $cliente): ?>
-                                    <option value="<?php echo $cliente->cliente_id; ?>">
+                                    <option value="<?php echo $cliente->cliente_id; ?>" <?php echo ($cliente->cliente_id == $factura->cliente_id) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($cliente->nombre . ' ' . $cliente->apellido . ' (' . $cliente->cuil . ')'); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -109,7 +128,7 @@ if (file_exists($navigationPath)) {
                         <div class="mb-3">
                             <label for="fecha" class="form-label">Fecha <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" id="fecha" name="fecha" 
-                                   value="<?php echo date('Y-m-d'); ?>" required>
+                                   value="<?php echo $factura->fecha; ?>" required>
                         </div>
                     </div>
                 </div>
@@ -126,7 +145,7 @@ if (file_exists($navigationPath)) {
                                 <strong>Subtotal:</strong>
                             </div>
                             <div class="col-6 text-end">
-                                $<span id="subtotal">0.00</span>
+                                $<span id="subtotal"><?php echo number_format($factura->subtotal, 2); ?></span>
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -134,7 +153,7 @@ if (file_exists($navigationPath)) {
                                 <strong>Impuestos:</strong>
                             </div>
                             <div class="col-6 text-end">
-                                $<span id="impuestos">0.00</span>
+                                $<span id="impuestos"><?php echo number_format($factura->impuesto, 2); ?></span>
                             </div>
                         </div>
                         <div class="row mb-2">
@@ -142,7 +161,7 @@ if (file_exists($navigationPath)) {
                                 <strong>Total:</strong>
                             </div>
                             <div class="col-6 text-end">
-                                $<span id="total">0.00</span>
+                                $<span id="total"><?php echo number_format($factura->total, 2); ?></span>
                             </div>
                         </div>
                     </div>
@@ -159,14 +178,55 @@ if (file_exists($navigationPath)) {
             </div>
             <div class="card-body">
                 <div id="lineasFactura">
-                    <!-- Las líneas de factura se agregarán aquí dinámicamente -->
+                    <!-- Las líneas de factura existentes se cargarán aquí -->
+                    <?php foreach ($factura->lineas as $index => $linea): ?>
+                    <div class="row product-row align-items-end" id="linea-<?php echo $index; ?>">
+                        <div class="col-md-5">
+                            <label class="form-label">Producto</label>
+                            <select class="form-select producto-select" name="producto_id[]" required onchange="actualizarPrecio(<?php echo $index; ?>)">
+                                <option value="">Seleccionar producto...</option>
+                                <?php foreach ($productos as $producto): ?>
+                                    <option value="<?php echo $producto->producto_id; ?>" 
+                                            data-precio="<?php echo $producto->precio_unitario; ?>"
+                                            data-impuesto="<?php echo $producto->porcentaje_impuesto; ?>"
+                                            data-stock="<?php echo $producto->stock; ?>"
+                                            <?php echo ($producto->producto_id == $linea->producto_id) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($producto->nombre . ' (' . $producto->codigo . ') - Stock: ' . $producto->stock); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" class="form-control cantidad-input" name="cantidad[]" min="1" 
+                                   value="<?php echo $linea->cantidad; ?>" 
+                                   onchange="calcularTotalesLinea(<?php echo $index; ?>)" 
+                                   oninput="validarStock(<?php echo $index; ?>)" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Precio Unitario</label>
+                            <input type="text" class="form-control precio-input" id="precio-<?php echo $index; ?>" 
+                                   value="<?php echo number_format($linea->precio_unitario, 2); ?>" readonly>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Total Línea</label>
+                            <input type="text" class="form-control total-linea-input" id="total-linea-<?php echo $index; ?>" 
+                                   value="<?php echo number_format($linea->total_linea, 2); ?>" readonly>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-danger" onclick="eliminarLinea(<?php echo $index; ?>)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
 
         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
             <button type="submit" class="btn btn-primary btn-lg">
-                <i class="bi bi-check-circle"></i> Crear Factura
+                <i class="bi bi-check-circle"></i> Actualizar Factura
             </button>
         </div>
     </form>
@@ -176,8 +236,8 @@ if (file_exists($navigationPath)) {
 // Almacenar información de productos para cálculos
 const productos = <?php echo json_encode($productos); ?>;
 
-// Contador para IDs únicos de líneas
-let contadorLineas = 0;
+// Contador para IDs únicos de líneas (iniciar después de las líneas existentes)
+let contadorLineas = <?php echo count($factura->lineas); ?>;
 
 // Función para agregar una nueva línea de producto
 function agregarLineaProducto() {
@@ -333,9 +393,14 @@ function calcularTotales() {
 // Event listeners
 document.getElementById('agregarLinea').addEventListener('click', agregarLineaProducto);
 
-// Agregar una línea inicial al cargar la página
+// Inicializar precios y totales para las líneas existentes al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
-    agregarLineaProducto();
+    // Inicializar cada línea existente
+    <?php foreach ($factura->lineas as $index => $linea): ?>
+        actualizarPrecio(<?php echo $index; ?>);
+    <?php endforeach; ?>
+    
+    calcularTotales();
 });
 </script>
 
@@ -344,6 +409,6 @@ document.addEventListener('DOMContentLoaded', function() {
 if (file_exists($footerPath)) {
     include $footerPath;
 } else {
-include __DIR__ . '/../../includes/footer.php';
+    include __DIR__ . '/../../includes/footer.php';
 }
 ?>

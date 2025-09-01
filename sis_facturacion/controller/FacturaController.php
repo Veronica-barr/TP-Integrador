@@ -21,8 +21,30 @@ class FacturaController {
         return $this->facturaDAL->listarFacturas($fecha_desde, $fecha_hasta);
     }
 
-    public function obtenerFactura($factura_id) {
-        return $this->facturaDAL->obtenerFacturaPorId($factura_id);
+    public function obtenerFacturaPorId($factura_id) {
+        error_log("Buscando factura con ID: " . $factura_id);
+        
+        // Llama al método del DAL en lugar de hacer la consulta aquí
+        $factura = $this->facturaDAL->obtenerFacturaPorId($factura_id);
+        
+        error_log("Factura encontrada: " . ($factura ? "Sí" : "No"));
+        
+        return $factura;
+    }
+
+    public function verDetalleFactura($factura_id) {
+        // Validar que el ID sea numérico
+        if (!is_numeric($factura_id) || $factura_id <= 0) {
+            throw new Exception("ID de factura inválido");
+        }
+        
+        $factura = $this->facturaDAL->obtenerFacturaPorId($factura_id);
+        
+        if (!$factura) {
+            throw new Exception("Factura no encontrada");
+        }
+        
+        return $factura;
     }
 
     public function crearFactura($data) {
@@ -76,6 +98,73 @@ class FacturaController {
 
     public function obtenerProductos() {
         return $this->productoDAL->listar();
+    }
+
+    // Nuevo método para actualizar factura
+    public function actualizarFactura($factura_id, $data) {
+        // Primero, restaurar el stock de los productos de la factura original
+        $factura_original = $this->obtenerFacturaPorId($factura_id);
+        
+        foreach ($factura_original->lineas as $linea) {
+            $this->productoDAL->actualizarStock($linea->producto_id, $linea->cantidad, 'incrementar');
+        }
+        
+        // Crear la nueva factura con los datos actualizados
+        $factura = new Factura();
+        $factura->cliente_id = $data['cliente_id'];
+        $factura->fecha = $data['fecha'];
+        $factura->estado = 'PENDIENTE';
+        
+        $subtotal = 0;
+        $impuesto = 0;
+        
+        // Procesar líneas de factura
+        if (isset($data['lineas']) && is_array($data['lineas'])) {
+            foreach ($data['lineas'] as $lineaData) {
+                if (!empty($lineaData['producto_id']) && !empty($lineaData['cantidad'])) {
+                    $producto = $this->productoDAL->getById($lineaData['producto_id']);
+                    
+                    if ($producto && $producto->stock >= $lineaData['cantidad']) {
+                        $linea = new LineaFactura();
+                        $linea->producto_id = $lineaData['producto_id'];
+                        $linea->cantidad = $lineaData['cantidad'];
+                        $linea->precio_unitario = $producto->precio_unitario;
+                        $linea->porcentaje_impuesto = $producto->porcentaje_impuesto;
+                        $linea->subtotal = $linea->cantidad * $linea->precio_unitario;
+                        $linea->monto_impuesto = $linea->subtotal * ($linea->porcentaje_impuesto / 100);
+                        $linea->total_linea = $linea->subtotal + $linea->monto_impuesto;
+                        
+                        $subtotal += $linea->subtotal;
+                        $impuesto += $linea->monto_impuesto;
+                        
+                        $factura->lineas[] = $linea;
+                        
+                        // Actualizar el stock
+                        $this->productoDAL->actualizarStock($linea->producto_id, $linea->cantidad, 'decrementar');
+                    }
+                }
+            }
+        }
+        
+        $factura->subtotal = $subtotal;
+        $factura->impuesto = $impuesto;
+        $factura->total = $subtotal + $impuesto;
+        
+        // Actualizar la factura en la base de datos
+        return $this->facturaDAL->actualizarFactura($factura_id, $factura);
+    }
+
+    // Nuevo método para eliminar factura
+    public function eliminarFactura($factura_id) {
+        // Primero, restaurar el stock de los productos
+        $factura = $this->obtenerFacturaPorId($factura_id);
+        
+        foreach ($factura->lineas as $linea) {
+            $this->productoDAL->actualizarStock($linea->producto_id, $linea->cantidad, 'incrementar');
+        }
+        
+        // Eliminar la factura
+        return $this->facturaDAL->eliminarFactura($factura_id);
     }
 }
 ?>

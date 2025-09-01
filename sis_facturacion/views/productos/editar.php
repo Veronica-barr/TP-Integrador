@@ -1,35 +1,44 @@
 <?php
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Definir rutas de inclusión
 $baseDir = __DIR__ . '/../..';
 require_once $baseDir . '/controller/ProductoController.php';
 
-// Procesar el formulario cuando se envía
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $productoController = new ProductoController();
+$productoController = new ProductoController();
+$producto = null;
+
+// Obtener el producto si se proporciona un ID
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    $producto = $productoController->ver($id);
     
-    // Recoger y sanitizar datos del formulario
+    if (!$producto) {
+        header('Location: list.php?mensaje=Producto no encontrado&tipo=danger');
+        exit();
+    }
+}
+
+// Procesar el formulario de edición
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $datosProducto = [
-        'codigo' => $_POST['codigo'] ?? '',
-        'nombre' => $_POST['nombre'] ?? '',
-        'descripcion' => $_POST['descripcion'] ?? '',
-        'precio_unitario' => floatval($_POST['precio_unitario'] ?? 0),
-        'porcentaje_impuesto' => floatval($_POST['porcentaje_impuesto'] ?? 0),
-        'stock' => intval($_POST['stock'] ?? 0),
-        'activo' => 1
+        'codigo' => $_POST['codigo'],
+        'nombre' => $_POST['nombre'],
+        'descripcion' => $_POST['descripcion'],
+        'precio_unitario' => floatval($_POST['precio_unitario']),
+        'porcentaje_impuesto' => floatval($_POST['porcentaje_impuesto']),
+        'stock' => intval($_POST['stock'])
     ];
     
-    // Intentar crear el producto
-    $resultado = $productoController->crear($datosProducto);
+    $id = $_POST['producto_id'];
     
-    if ($resultado) {
-        header('Location: list.php?mensaje=Producto creado exitosamente&tipo=success');
+    if ($productoController->actualizar($id, $datosProducto)) {
+        header('Location: list.php?mensaje=Producto actualizado correctamente&tipo=success');
         exit();
     } else {
-        $error = "Error al crear el producto. Intente nuevamente.";
+        $error = "Error al actualizar el producto. Intente nuevamente.";
     }
 }
 
@@ -49,7 +58,7 @@ if (!file_exists($navigationPath)) {
 if (file_exists($headerPath)) {
     include $headerPath;
 } else {
-    echo "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Crear Producto</title>";
+    echo "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Editar Producto</title>";
     echo "<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'>";
     echo "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css'>";
     echo "<style>
@@ -71,8 +80,8 @@ if (file_exists($navigationPath)) {
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Crear Nuevo Producto</h4>
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Editar Producto</h4>
                 </div>
                 <div class="card-body">
                     <?php if (isset($error)): ?>
@@ -82,27 +91,26 @@ if (file_exists($navigationPath)) {
                         </div>
                     <?php endif; ?>
                     
-                    <form method="POST" action="create.php">
+                    <form method="POST" action="editar.php">
+                        <input type="hidden" name="producto_id" value="<?php echo $producto->producto_id; ?>">
+                        
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="codigo" class="form-label required-label">Código</label>
                                 <input type="text" class="form-control" id="codigo" name="codigo" 
-                                       value="<?php echo $_POST['codigo'] ?? ''; ?>" required 
-                                       placeholder="Ingrese el código del producto">
+                                       value="<?php echo htmlspecialchars($producto->codigo ?? ''); ?>" required>
                             </div>
                             
                             <div class="col-md-6 mb-3">
                                 <label for="nombre" class="form-label required-label">Nombre</label>
                                 <input type="text" class="form-control" id="nombre" name="nombre" 
-                                       value="<?php echo $_POST['nombre'] ?? ''; ?>" required 
-                                       placeholder="Ingrese el nombre del producto">
+                                       value="<?php echo htmlspecialchars($producto->nombre ?? ''); ?>" required>
                             </div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion" 
-                                      rows="3" placeholder="Ingrese una descripción del producto"><?php echo $_POST['descripcion'] ?? ''; ?></textarea>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3"><?php echo htmlspecialchars($producto->descripcion ?? ''); ?></textarea>
                         </div>
                         
                         <div class="row">
@@ -111,8 +119,7 @@ if (file_exists($navigationPath)) {
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="precio_unitario" name="precio_unitario" 
-                                           step="0.01" min="0" value="<?php echo $_POST['precio_unitario'] ?? ''; ?>" required 
-                                           placeholder="0.00">
+                                           step="0.01" min="0" value="<?php echo $producto->precio_unitario; ?>" required>
                                 </div>
                             </div>
                             
@@ -120,8 +127,7 @@ if (file_exists($navigationPath)) {
                                 <label for="porcentaje_impuesto" class="form-label required-label">Impuesto (%)</label>
                                 <div class="input-group">
                                     <input type="number" class="form-control" id="porcentaje_impuesto" name="porcentaje_impuesto" 
-                                           step="0.01" min="0" max="100" value="<?php echo $_POST['porcentaje_impuesto'] ?? 21; ?>" required 
-                                           placeholder="0.00">
+                                           step="0.01" min="0" max="100" value="<?php echo $producto->porcentaje_impuesto; ?>" required>
                                     <span class="input-group-text">%</span>
                                 </div>
                             </div>
@@ -129,17 +135,16 @@ if (file_exists($navigationPath)) {
                             <div class="col-md-4 mb-3">
                                 <label for="stock" class="form-label required-label">Stock</label>
                                 <input type="number" class="form-control" id="stock" name="stock" 
-                                       min="0" value="<?php echo $_POST['stock'] ?? 0; ?>" required 
-                                       placeholder="0">
+                                       min="0" value="<?php echo $producto->stock; ?>" required>
                             </div>
                         </div>
                         
                         <div class="d-flex justify-content-between mt-4">
                             <a href="list.php" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Volver al Listado
+                                <i class="bi bi-arrow-left me-1"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle me-1"></i> Crear Producto
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle me-1"></i> Actualizar Producto
                             </button>
                         </div>
                     </form>
@@ -167,23 +172,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Validar que el precio sea positivo
-        const precio = document.getElementById('precio_unitario');
-        if (precio.value && parseFloat(precio.value) <= 0) {
-            esValido = false;
-            precio.classList.add('is-invalid');
-        }
-        
-        // Validar que el impuesto esté entre 0 y 100
-        const impuesto = document.getElementById('porcentaje_impuesto');
-        if (impuesto.value && (parseFloat(impuesto.value) < 0 || parseFloat(impuesto.value) > 100)) {
-            esValido = false;
-            impuesto.classList.add('is-invalid');
-        }
-        
         if (!esValido) {
             e.preventDefault();
-            alert('Por favor, complete todos los campos requeridos correctamente.');
+            alert('Por favor, complete todos los campos requeridos.');
         }
     });
 });

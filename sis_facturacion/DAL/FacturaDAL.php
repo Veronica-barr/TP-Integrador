@@ -19,20 +19,31 @@ class FacturaDAL {
                   WHERE 1=1";
         
         if ($fecha_desde) {
-            $query .= " AND f.fecha >= :fecha_desde";
+            if (is_numeric($fecha_desde)) {
+                $fecha_desde = date('Y-m-d', strtotime($fecha_desde . ' days ago'));
+            }
+            if (DateTime::createFromFormat('Y-m-d', $fecha_desde) !== false) {
+                $query .= " AND f.fecha >= :fecha_desde";
+            }
         }
+        
         if ($fecha_hasta) {
-            $query .= " AND f.fecha <= :fecha_hasta";
+            if (is_numeric($fecha_hasta)) {
+                $fecha_hasta = date('Y-m-d', strtotime($fecha_hasta . ' days ago'));
+            }
+            if (DateTime::createFromFormat('Y-m-d', $fecha_hasta) !== false) {
+                $query .= " AND f.fecha <= :fecha_hasta";
+            }
         }
         
         $query .= " ORDER BY f.fecha DESC, f.numero_factura DESC";
         
         $stmt = $this->conn->prepare($query);
         
-        if ($fecha_desde) {
+        if ($fecha_desde && DateTime::createFromFormat('Y-m-d', $fecha_desde) !== false) {
             $stmt->bindParam(':fecha_desde', $fecha_desde);
         }
-        if ($fecha_hasta) {
+        if ($fecha_hasta && DateTime::createFromFormat('Y-m-d', $fecha_hasta) !== false) {
             $stmt->bindParam(':fecha_hasta', $fecha_hasta);
         }
         
@@ -59,36 +70,57 @@ class FacturaDAL {
     }
 
     public function obtenerFacturaPorId($factura_id) {
-        $query = "SELECT f.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.cuil as cliente_cuil 
-                  FROM facturas f 
-                  INNER JOIN clientes c ON f.cliente_id = c.cliente_id 
-                  WHERE f.factura_id = :factura_id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':factura_id', $factura_id);
-        $stmt->execute();
-        
-        if ($stmt->rowCount() == 0) {
-            return null;
+        try {
+            if (!is_numeric($factura_id) || $factura_id <= 0) {
+                throw new InvalidArgumentException("ID de factura inválido");
+            }
+            
+            error_log("Buscando factura con ID: " . $factura_id);
+            
+            $query = "SELECT f.*, c.nombre as cliente_nombre, c.apellido as cliente_apellido, c.cuil as cliente_cuil 
+                      FROM facturas f 
+                      INNER JOIN clientes c ON f.cliente_id = c.cliente_id 
+                      WHERE f.factura_id = :factura_id";
+            
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':factura_id', $factura_id, PDO::PARAM_INT);
+            
+            if (!$stmt->execute()) {
+                throw new Exception("Error al ejecutar la consulta");
+            }
+            
+            error_log("Número de filas encontradas: " . $stmt->rowCount());
+            
+            if ($stmt->rowCount() == 0) {
+                return null;
+            }
+            
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $factura = new Factura();
+            
+            $factura->factura_id = $row['factura_id'];
+            $factura->cliente_id = $row['cliente_id'];
+            $factura->numero_factura = $row['numero_factura'];
+            $factura->fecha = $row['fecha'];
+            $factura->subtotal = $row['subtotal'];
+            $factura->impuesto = $row['impuesto'];
+            $factura->total = $row['total'];
+            $factura->estado = $row['estado'];
+            $factura->cliente_nombre = $row['cliente_nombre'];
+            $factura->cliente_apellido = $row['cliente_apellido'];
+            $factura->cliente_cuil = $row['cliente_cuil'];
+            
+            $factura->lineas = $this->obtenerLineasFactura($factura_id);
+            
+            return $factura;
+            
+        } catch (PDOException $e) {
+            error_log("Error PDO en obtenerFacturaPorId: " . $e->getMessage());
+            throw new Exception("Error al obtener la factura");
+        } catch (Exception $e) {
+            error_log("Error en obtenerFacturaPorId: " . $e->getMessage());
+            throw $e;
         }
-        
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        $factura = new Factura();
-        $factura->factura_id = $row['factura_id'];
-        $factura->cliente_id = $row['cliente_id'];
-        $factura->numero_factura = $row['numero_factura'];
-        $factura->fecha = $row['fecha'];
-        $factura->subtotal = $row['subtotal'];
-        $factura->impuesto = $row['impuesto'];
-        $factura->total = $row['total'];
-        $factura->estado = $row['estado'];
-        $factura->cliente_nombre = $row['cliente_nombre'];
-        $factura->cliente_apellido = $row['cliente_apellido'];
-        $factura->cliente_cuil = $row['cliente_cuil'];
-        
-        // Obtener líneas de factura
-        $factura->lineas = $this->obtenerLineasFactura($factura_id);
-        
-        return $factura;
     }
 
     private function obtenerLineasFactura($factura_id) {
@@ -123,10 +155,8 @@ class FacturaDAL {
         try {
             $this->conn->beginTransaction();
             
-            // Generar número de factura
             $numero_factura = $this->generarNumeroFactura();
             
-            // Insertar factura
             $query = "INSERT INTO facturas (cliente_id, numero_factura, fecha, subtotal, impuesto, total, estado) 
                       VALUES (:cliente_id, :numero_factura, :fecha, :subtotal, :impuesto, :total, :estado)";
             $stmt = $this->conn->prepare($query);
@@ -141,7 +171,6 @@ class FacturaDAL {
             
             $factura_id = $this->conn->lastInsertId();
             
-            // Insertar líneas de factura
             foreach ($factura->lineas as $linea) {
                 $query = "INSERT INTO lineas_factura (factura_id, producto_id, cantidad, precio_unitario, 
                           porcentaje_impuesto, subtotal, monto_impuesto, total_linea) 
@@ -158,7 +187,6 @@ class FacturaDAL {
                 $stmt->bindParam(':total_linea', $linea->total_linea);
                 $stmt->execute();
                 
-                // Actualizar stock del producto
                 $query = "UPDATE productos SET stock = stock - :cantidad WHERE producto_id = :producto_id";
                 $stmt = $this->conn->prepare($query);
                 $stmt->bindParam(':cantidad', $linea->cantidad);
@@ -193,6 +221,81 @@ class FacturaDAL {
         $stmt->bindParam(':estado', $estado);
         $stmt->bindParam(':factura_id', $factura_id);
         return $stmt->execute();
+    }
+
+    // Nuevo método para actualizar factura
+    public function actualizarFactura($factura_id, Factura $factura) {
+        try {
+            $this->conn->beginTransaction();
+            
+            // Eliminar las líneas existentes
+            $query = "DELETE FROM lineas_factura WHERE factura_id = :factura_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':factura_id', $factura_id);
+            $stmt->execute();
+            
+            // Actualizar la factura
+            $query = "UPDATE facturas SET cliente_id = :cliente_id, fecha = :fecha, 
+                      subtotal = :subtotal, impuesto = :impuesto, total = :total 
+                      WHERE factura_id = :factura_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':cliente_id', $factura->cliente_id);
+            $stmt->bindParam(':fecha', $factura->fecha);
+            $stmt->bindParam(':subtotal', $factura->subtotal);
+            $stmt->bindParam(':impuesto', $factura->impuesto);
+            $stmt->bindParam(':total', $factura->total);
+            $stmt->bindParam(':factura_id', $factura_id);
+            $stmt->execute();
+            
+            // Insertar las nuevas líneas
+            foreach ($factura->lineas as $linea) {
+                $query = "INSERT INTO lineas_factura (factura_id, producto_id, cantidad, precio_unitario, 
+                          porcentaje_impuesto, subtotal, monto_impuesto, total_linea) 
+                          VALUES (:factura_id, :producto_id, :cantidad, :precio_unitario, :porcentaje_impuesto, 
+                          :subtotal, :monto_impuesto, :total_linea)";
+                $stmt = $this->conn->prepare($query);
+                $stmt->bindParam(':factura_id', $factura_id);
+                $stmt->bindParam(':producto_id', $linea->producto_id);
+                $stmt->bindParam(':cantidad', $linea->cantidad);
+                $stmt->bindParam(':precio_unitario', $linea->precio_unitario);
+                $stmt->bindParam(':porcentaje_impuesto', $linea->porcentaje_impuesto);
+                $stmt->bindParam(':subtotal', $linea->subtotal);
+                $stmt->bindParam(':monto_impuesto', $linea->monto_impuesto);
+                $stmt->bindParam(':total_linea', $linea->total_linea);
+                $stmt->execute();
+            }
+            
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
+    }
+
+    // Nuevo método para eliminar factura
+    public function eliminarFactura($factura_id) {
+        try {
+            $this->conn->beginTransaction();
+            
+            // Eliminar las líneas de la factura
+            $query = "DELETE FROM lineas_factura WHERE factura_id = :factura_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':factura_id', $factura_id);
+            $stmt->execute();
+            
+            // Eliminar la factura
+            $query = "DELETE FROM facturas WHERE factura_id = :factura_id";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindParam(':factura_id', $factura_id);
+            $stmt->execute();
+            
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
     }
 }
 ?>

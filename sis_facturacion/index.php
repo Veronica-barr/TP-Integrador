@@ -23,7 +23,7 @@ include './includes/navigation.php';
                 <div class="card-body text-center">
                     <h5 class="card-title">Clientes</h5>
                     <p class="card-text">Gestión de clientes registrados</p>
-                    <a href="./views/clientes/list.php" class="btn btn-primary">Administrar</a>
+                    <a href="./views/clientes/listadoClientes.php" class="btn btn-primary">Administrar</a>
                 </div>
             </div>
         </div>
